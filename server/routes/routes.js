@@ -525,10 +525,13 @@ export default function routes(server) {
   });
 
   server.route({
-    path: '/api/sentinl/sql/execute',
+    path: '/api/sentinl/sql/execute/{index}',
     method: 'POST',
     config: {
       validate: {
+        params: {
+          index: Joi.string(),
+        },
         payload: {
           sql_query: Joi.string(),
         },
@@ -536,6 +539,7 @@ export default function routes(server) {
     },
     handler: async function (req, reply) {
       const sqlQuery = req.payload.sql_query;
+      const index = req.params.index;
 
       try {
         const apiSqlTranslate = await server.inject({
@@ -548,7 +552,16 @@ export default function routes(server) {
             sql_query: sqlQuery,
           },
         });
-        return reply({ result: apiSqlTranslate.result }); // DSL query
+
+        const body = apiSqlTranslate.result.dsl_query;
+        body.size = config.es.results;
+
+        const resp = await client.search({
+          index,
+          body,
+          type: config.es.default_type,
+        });
+        return reply(resp);
       } catch (err) {
         return reply(handleESError(err));
       }
