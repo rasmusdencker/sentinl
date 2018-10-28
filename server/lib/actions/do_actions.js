@@ -26,6 +26,7 @@ import Promise from 'bluebird';
 import moment from 'moment';
 import rison from 'rison';
 import mustache from 'mustache';
+import TemplateEngineFactory from '../templates/engine_factory';
 import { WebClient } from '@slack/client';
 import getConfiguration from '../get_configuration';
 import getElasticsearchClient from '../get_elasticsearch_client';
@@ -422,7 +423,8 @@ export default function (server, actions, payload, task) {
       (async () => {
         try {
           let formatter = action.slack.message ? action.slack.message : 'Series Alarm {{ payload._id}}: {{payload.hits.total}}';
-          let message = mustache.render(formatter, {payload: payload, watcher: task._source});
+          let templateEngine = TemplateEngineFactory.build(action.slack.template_type || 'mustache');
+          let message = templateEngine.render(formatter, {payload: payload, watcher: task._source});
           priority = action.slack.priority || 'medium';
           log.debug(`webhook to #${action.slack.channel}, message: ${message}`);
 
